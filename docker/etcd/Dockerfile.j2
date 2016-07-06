@@ -1,0 +1,10 @@
+FROM {{ namespace }}/base-tools:{{ tag }}
+MAINTAINER {{ maintainer }}
+
+RUN curl -L -o etcd-{{ etcd_version }}-linux-amd64.tar.gz https://github.com/coreos/etcd/releases/download/{{ etcd_version }}/etcd-{{ etcd_version }}-linux-amd64.tar.gz \
+    && tar -zxvf etcd-{{ etcd_version }}-linux-amd64.tar.gz \
+    && mv etcd-{{ etcd_version }}-linux-amd64/etcd /usr/local/bin \
+    && mkdir -p /var/etcd/ \
+    && rm -r etcd-{{ etcd_version }}-linux-amd64 \
+    && rm etcd-{{ etcd_version }}-linux-amd64.tar.gz
+
