@@ -1,8 +1,8 @@
 service:
   name: etcd
   ports:
-    - etcd_client_port
-    - etcd_server_port
+    - {{ etcd_client_port }}
+    - {{ etcd_server_port }}
   containers:
     - name: etcd
       image: etcd
