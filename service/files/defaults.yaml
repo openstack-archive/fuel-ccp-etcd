@@ -6,4 +6,4 @@ configs:
   etcd_server_port: 2380
 
 versions:
-  etcd_version: v3.0.1
+  etcd_version: v3.0.9
