@@ -1,9 +1,10 @@
 configs:
-  etcd_urls: http://etcd:2379
-  etcd_connection_attempts: 20
-  etcd_connection_delay: 5
-  etcd_client_port: 2379
-  etcd_server_port: 2380
+  etcd:
+    urls: http://etcd:2379
+    connection_attempts: 20
+    connection_delay: 5
+    client_port: 2379
+    server_port: 2380
 
 versions:
   etcd_version: v3.0.9
