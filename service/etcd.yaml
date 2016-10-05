@@ -1,8 +1,8 @@
 service:
   name: etcd
   ports:
-    - {{ etcd_client_port }}
-    - {{ etcd_server_port }}
+    - {{ etcd.client_port }}
+    - {{ etcd.server_port }}
   containers:
     - name: etcd
       image: etcd
@@ -10,5 +10,5 @@ service:
         readiness: "true"
         liveness: "true"
       daemon:
-        command: etcd --listen-client-urls http://0.0.0.0:{{ etcd_client_port }}
-                      --advertise-client-urls http://{{ address("etcd") }}:{{ etcd_client_port }}
+        command: etcd --listen-client-urls http://0.0.0.0:{{ etcd.client_port }}
+                      --advertise-client-urls http://{{ address("etcd") }}:{{ etcd.client_port }}
