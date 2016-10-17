@@ -8,7 +8,9 @@ service:
       image: etcd
       probes:
         readiness: "true"
-        liveness: "true"
+        liveness:
+          command: "true"
+          type: "exec"
       daemon:
         command: etcd --listen-client-urls http://0.0.0.0:{{ etcd.client_port }}
                       --advertise-client-urls http://{{ address("etcd") }}:{{ etcd.client_port }}
