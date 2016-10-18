@@ -1,4 +1,4 @@
-FROM {{ namespace }}/base-tools:{{ tag }}
+FROM {{ image_spec("base-tools") }}
 MAINTAINER {{ maintainer }}
 
 RUN curl -L -o etcd-{{ etcd_version }}-linux-amd64.tar.gz https://github.com/coreos/etcd/releases/download/{{ etcd_version }}/etcd-{{ etcd_version }}-linux-amd64.tar.gz \
