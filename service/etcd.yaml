@@ -12,5 +12,5 @@ service:
           command: "true"
           type: "exec"
       daemon:
-        command: etcd --listen-client-urls http://0.0.0.0:{{ etcd.client_port }}
-                      --advertise-client-urls http://{{ address("etcd") }}:{{ etcd.client_port }}
+        command: etcd --listen-client-urls http://0.0.0.0:{{ etcd.client_port.cont }}
+                      --advertise-client-urls http://{{ address("etcd") }}:{{ etcd.client_port.cont }}
