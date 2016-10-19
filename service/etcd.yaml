@@ -10,5 +10,5 @@ service:
         readiness: "true"
         liveness: "true"
       daemon:
-        command: etcd --listen-client-urls http://0.0.0.0:{{ etcd.client_port }}
-                      --advertise-client-urls http://{{ address("etcd") }}:{{ etcd.client_port }}
+        command: etcd --listen-client-urls http://0.0.0.0:{{ etcd.client_port.cont }}
+                      --advertise-client-urls http://{{ address("etcd") }}:{{ etcd.client_port.cont }}

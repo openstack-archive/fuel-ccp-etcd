@@ -2,8 +2,10 @@ configs:
   etcd:
     connection_attempts: 20
     connection_delay: 5
-    client_port: 2379
-    server_port: 2380
+    client_port:
+      cont: 2379
+    server_port:
+      cont: 2380
 
 versions:
   etcd_version: v3.0.12
