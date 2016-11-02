@@ -12,5 +12,10 @@ service:
           command: "true"
           type: "exec"
       daemon:
-        command: etcd --listen-client-urls http://0.0.0.0:{{ etcd.client_port.cont }}
+        command: etcd --data-dir {{ etcd.data_dir }} --listen-client-urls http://0.0.0.0:{{ etcd.client_port.cont }}
                       --advertise-client-urls http://{{ address("etcd") }}:{{ etcd.client_port.cont }}
+      volumes:
+        - name: etcd-data
+          type: host
+          path: {{ etcd.node_data_dir }}
+          mount-path: {{ etcd.data_dir }}

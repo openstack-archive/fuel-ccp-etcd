@@ -6,6 +6,8 @@ configs:
       cont: 2379
     server_port:
       cont: 2380
+    data_dir: /var/lib/microservices/etcd
+    node_data_dir: /var/lib/microservices/etcd
 
 versions:
   etcd_version: v3.0.12
