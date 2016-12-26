@@ -7,11 +7,6 @@ service:
   containers:
     - name: etcd
       image: etcd
-      probes:
-        readiness: "true"
-        liveness:
-          command: "true"
-          type: "exec"
       daemon:
         command: etcd --listen-client-urls http://0.0.0.0:{{ etcd.client_port.cont }}
                       --advertise-client-urls {{ address("etcd", etcd.client_port, with_scheme=True) }}
