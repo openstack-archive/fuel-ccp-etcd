@@ -1,0 +1,9 @@
+Code-Review+2: Andrey Pavlov <apavlov@mirantis.com>
+Code-Review+2: Yuriy Taraday <yorik.sar@gmail.com>
+Workflow+1: Yuriy Taraday <yorik.sar@gmail.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Wed, 28 Dec 2016 11:20:47 +0000
+Reviewed-on: https://review.openstack.org/415432
+Project: openstack/fuel-ccp-etcd
+Branch: refs/heads/master
