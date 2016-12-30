@@ -1,0 +1,15 @@
+FROM {{ image_spec("base-tools") }}
+MAINTAINER {{ maintainer }}
+
+# so apt-get doesn't complain
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN \
+  apt-get update && \
+  apt-get install -y ca-certificates && \
+  rm -rf /var/lib/apt/lists/*
+
+ADD server server
+ADD run.sh /run.sh
+RUN chmod 755 /run.sh
+ENTRYPOINT ["/run.sh"]
