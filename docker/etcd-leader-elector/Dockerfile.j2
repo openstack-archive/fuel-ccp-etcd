@@ -1,0 +1,12 @@
+FROM {{ image_spec("base-tools") }}
+
+ADD build.sh /build.sh
+
+RUN \
+  chmod 755 /build.sh && \
+  apt-get install -t jessie-backports -y golang-go git && \
+  bash /build.sh && \
+  apt-get autoremove -y golang-go git && \
+  rm -rf /var/lib/apt/lists/* && \
+  rm -rf /golang && \
+  rm -rf /build.sh
