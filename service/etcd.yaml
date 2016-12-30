@@ -1,6 +1,7 @@
 dsl_version: 0.4.0
 service:
   name: etcd
+  kind: DaemonSet
   ports:
     - {{ etcd.client_port }}
     - {{ etcd.server_port }}
@@ -12,5 +13,27 @@ service:
     - name: etcd
       image: etcd
       daemon:
-        command: etcd --listen-client-urls http://0.0.0.0:{{ etcd.client_port.cont }}
-                      --advertise-client-urls {{ address("etcd", etcd.client_port, with_scheme=True) }}
+        files:
+          - entrypoint
+          - watcher
+        command: /opt/ccp/bin/entrypoint.py
+    - name: leader-elector
+      image: leader-elector
+      daemon:
+        command: /run.sh --election=etcd-election --http=0.0.0.0:4040 --election-namespace=ccp
+    - name: etcd-watcher
+      image: etcd
+      daemon:
+        files:
+          - watcher
+        command: /opt/ccp/bin/watcher.py --namespace=ccp
+
+files:
+  entrypoint:
+    path: /opt/ccp/bin/entrypoint.py
+    content: etcd_start.py
+    perm: "0755"
+  watcher:
+    path: /opt/ccp/bin/watcher.py
+    content: k8s_etcd_watcher.py
+    perm: "0755"
