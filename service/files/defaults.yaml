@@ -6,6 +6,12 @@ configs:
       cont: 2379
     server_port:
       cont: 2380
+    token: "etcd-cluster"
 
 versions:
   etcd_version: v3.0.12
+
+sources:
+  etcd-leader-elector:
+    git_url: https://github.com/amnk/contrib
+    git_ref: election
