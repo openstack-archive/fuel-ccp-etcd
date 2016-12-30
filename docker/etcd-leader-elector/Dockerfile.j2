@@ -1,0 +1,18 @@
+FROM {{ image_spec("base-tools") }}
+
+ADD build.sh /build.sh
+
+{{ copy_sources("etcd-leader-elector", "/golang/src/k8s.io/contrib") }}
+
+RUN \
+  apt-get update && \
+  useradd --user-group --create-home --home-dir /home/elector elector && \
+  chmod 755 /build.sh && \
+  apt-get install -t jessie-backports -y golang-go git && \
+  bash /build.sh && \
+  apt-get autoremove -y golang-go git && \
+  rm -rf /var/lib/apt/lists/* && \
+  rm -rf /golang && \
+  rm -rf /build.sh
+
+USER elector
