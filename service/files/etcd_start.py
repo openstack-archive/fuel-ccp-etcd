@@ -20,8 +20,6 @@ ELECTOR_URL = 'http://127.0.0.1:4040/'
 CONNECTION_ATTEMPTS = 5
 CONNECTION_DELAY = 2
 
-ETCD_HOST_TEMPLATE = 'http://%s:%d'
-
 
 def retry(f):
     @functools.wraps(f)
@@ -50,7 +48,7 @@ def _get_leader_pod_name(url):
 
 
 def start_etcd(name, ipaddr, client_port, server_port, token, bootstrap=False,
-               initial_members=None):
+               tls=False, initial_members=None):
     # TODO(amnk): configuration should not be hardcoded, and it should include
     # other options like datadir, snapshotting period, etc
     etcd_bin = ['/usr/local/bin/etcd']
@@ -62,6 +60,13 @@ def start_etcd(name, ipaddr, client_port, server_port, token, bootstrap=False,
             '--advertise-client-urls=%s' % client_host,
             '--initial-advertise-peer-urls=%s' % server_host,
             '--initial-cluster-token=%s' % token]
+    if tls:
+        # Peer-to-peer communications are encrytted using peer-auto-tls etcd
+        # feature, while client/server communication is encrypted via provided
+        # certificates
+        args += ['--peer-auto-tls']
+        args += ['--cert-file=/etc/ccp/etcd_server_certificate.pem']
+        args += ['--key-file=/etc/ccp/etcd_server_key.pem']
     if bootstrap:
         boot_opts = ["--initial-cluster=%s=%s" % (name, server_host)]
         args += boot_opts
@@ -79,7 +84,7 @@ def _add_etcd_member(etcd_api, ipaddr, server_port):
     url_template = ETCD_HOST_TEMPLATE
     peer = url_template % (ipaddr, server_port)
     data = {'peerURLs': [peer]}
-    r = requests.post(etcd_api, json=data, headers=headers)
+    r = requests.post(etcd_api, json=data, headers=headers, verify=False)
     # https://coreos.com/etcd/docs/latest/members_api.html
     if r.status_code == 201:
         return peer
@@ -96,7 +101,7 @@ def _get_cluster_members(etcd_api):
     # When adding new node to existing etcd cluster, etcd requires certain
     # format, e.g.:
     # <name>=<peerURL>,<name2>=<peerURL2>,...
-    r = requests.get(etcd_api)
+    r = requests.get(etcd_api, verify=False)
     if r.status_code == 200:
         peers = r.json()['members']
         l = []
@@ -116,15 +121,21 @@ if __name__ == "__main__":
                         help='Etcd server port')
     parser.add_argument('-t', '--token', type=str, default='etcd-cluster',
                         help='Etcd cluster token')
+    parser.add_argument('--tls', action='store_true',
+                        help='If communications should be encrypted')
     args = parser.parse_args()
     leader = _get_leader_pod_name(ELECTOR_URL)
     hostname = socket.gethostname()
     ipaddr = socket.gethostbyname(hostname)
+    if args.tls:
+        ETCD_HOST_TEMPLATE = 'https://%s:%d'
+    else:
+        ETCD_HOST_TEMPLATE = 'http://%s:%d'
     if leader == ipaddr:
         # TODO(amnk): add recovery from complete disaster (e.g. restore data
         # from data-dir if it is available
         start_etcd(hostname, ipaddr, args.client_port, args.server_port,
-                   args.token, bootstrap=True)
+                   args.token, bootstrap=True, tls=args.tls)
     else:
         etcd_leader = ETCD_HOST_TEMPLATE % (leader, args.client_port)
         leader_endpoint = urlparse.urljoin(etcd_leader, 'v2/members')
@@ -132,4 +143,4 @@ if __name__ == "__main__":
         members = _get_cluster_members(leader_endpoint)
         all_members = members + (',%s=%s' % (hostname, peer))
         start_etcd(hostname, ipaddr, args.client_port, args.server_port,
-                   args.token, initial_members=all_members)
+                   args.token, tls=args.tls, initial_members=all_members)
