@@ -10,28 +10,30 @@ service:
     service:
       prometheus.io/port: "{{ etcd.client_port.cont }}"
       prometheus.io/scrape: "true"
+    pod:
+      pod.beta.kubernetes.io/subdomain: "etcd"
   containers:
     - name: etcd
       image: etcd
-      probes:
-        liveness:
-          type: "httpGet"
-          path: "/v2/keys"
-          port: {{ etcd.client_port.cont }}
       daemon:
         files:
           - entrypoint
-          - watcher
-        command: /opt/ccp/bin/entrypoint.py --client-port {{ etcd.client_port.cont }} --server-port {{ etcd.server_port.cont }} --token {{ etcd.token }}
-    - name: leader-elector
+          - server_certificate
+          - server_key
+          - ca_certificate
+        command: /opt/ccp/bin/entrypoint.py --client-port {{ etcd.client_port.cont }} --server-port {{ etcd.server_port.cont }} --token {{ etcd.token }}  {% if etcd.tls %} --tls {% endif %}
+    - name: etcd-leader-elector
       image: leader-elector
       daemon:
+        files:
+          - ca_certificate
         command: /run.sh --election=etcd-election --http=0.0.0.0:4040 --election-namespace={{ namespace }}
     - name: etcd-watcher
       image: etcd
       daemon:
         files:
           - watcher
+          - ca_certificate
         command: /opt/ccp/bin/watcher.py --namespace={{ namespace }}
 
 files:
@@ -39,6 +41,15 @@ files:
     path: /opt/ccp/bin/entrypoint.py
     content: etcd_start.py
     perm: "0755"
+  server_certificate:
+    path: /etc/ccp/etcd_server_certificate.pem
+    content: server.pem
+  server_key:
+    path: /etc/ccp/etcd_server_key.pem
+    content: server-key.pem
+  ca_certificate:
+    path: /etc/ccp/etcd_ca.pem
+    content: ca.pem
   watcher:
     path: /opt/ccp/bin/watcher.py
     content: k8s_etcd_watcher.py
