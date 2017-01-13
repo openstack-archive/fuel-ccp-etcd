@@ -29,10 +29,14 @@ def _get_http_header(TOKEN_FILE):
     return header
 
 
-def _get_etcd_client(etcd_service=None, etcd_port=None):
+def _get_etcd_client(etcd_service=None, etcd_port=None, cacert=None):
     srv = etcd_service or socket.gethostname()
     port = etcd_port or 2379
-    c = etcd.client.Client(port=port, host=srv)
+    if cacert:
+        c = etcd.client.Client(port=port, host=srv, protocol = 'https',
+                               ca_cert=cacert)
+    else:
+        c = etcd.client.Client(port=port, host=srv)
     return c
 
 
@@ -45,21 +49,27 @@ def _get_etcd_member_id(client, name):
         return None
 
 
-def _delete_etcd_member(name):
-    # Unfortunately python-etcd does not support deleting members
-    etcd = _get_etcd_client()
+def _delete_etcd_member(client, name):
     # Since we have to do 2 calls (one to get id and another one to
     # delete etcd member, there might be a race from other watchers.
     # So we check twice...
     _id = _get_etcd_member_id(etcd, name)
     if _id:
         LOG.debug("Id of %s is %s", name, _id)
-        url = urlparse.urljoin(etcd.base_uri, '/v2/members/%s' % _id)
-        r = requests.delete(url)
-        if r.status_code == 204:
+        # Waiting for https://github.com/jplana/python-etcd/pull/219
+        try:
+            client.api_execute(client.version_prefix + '/members/%s' % _id,
+                               client._MDELETE)
             return True
-        else:
-            LOG.debug("Delete failed with error %i", r.status_code)
+        except Exception as e:
+            LOG.debug("Delete failed with error %i", e)
+            return False
+        #url = urlparse.urljoin(etcd.base_uri, '/v2/members/%s' % _id)
+        #r = requests.delete(url, verify=False)
+        #if r.status_code == 204:
+        #    return True
+        #else:
+        #    LOG.debug("Delete failed with error %i", r.status_code)
     else:
         LOG.debug("Node %s was not found in the cluster", name)
     return False
@@ -80,31 +90,33 @@ def _get_kubernetes_stream():
     return response
 
 
-def _process_kubernetes_event(event, reasons):
-    """
-    Delete etcd node from the cluster if it was deleted in kubernetes
-    """
-    obj = event["object"]["involvedObject"]
-    name = obj["name"]
-    reason = event["object"]["reason"]
-    if (obj["kind"] == "Pod") and (obj["namespace"] == args.namespace):
-        LOG.info("Detected event: %s for pod: %s", reason, name)
-        if reason in reasons:
-            deleted = _delete_etcd_member(name)
-            if not deleted:
-                LOG.info("Delete of %s from etcd failed", name)
-            else:
-                LOG.info("Node %s was deleted from etcd", name)
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-n', '--namespace', type=str, default='default',
                         help='Namespace to filter events')
     parser.add_argument('--reasons', nargs='+', type=str, default=REASONS,
                         help='Custom list of reasons to filter')
+    parser.add_argument('--tls', action='store_true',
+                        help='If communications should be encrypted')
     args = parser.parse_args()
+    if args.tls:
+        cacert = '/etc/ccp/etcd_ca.pem'
+    else:
+        cacert = None
     while True:
         stream = _get_kubernetes_stream()
         for line in stream.iter_lines():
             event = json.loads(line)
-            _process_kubernetes_event(event, args.reasons)
+            obj = event["object"]["involvedObject"]
+            name = obj["name"]
+            reason = event["object"]["reason"]
+            if (obj["kind"] == "Pod") and (obj["namespace"] == args.namespace):
+                LOG.info("Detected event: %s for pod: %s", reason, name)
+                if reason in args.reasons:
+                    etcd_c = _get_etcd_client(cacert=cacert)
+                    deleted = _delete_etcd_member(etcd_c, name)
+                    if not deleted:
+                        LOG.info("Delete of %s from etcd failed", name)
+                    else:
+                        LOG.info("Node %s was deleted from etcd", name)
+
