@@ -29,10 +29,17 @@ def _get_http_header(TOKEN_FILE):
     return header
 
 
-def _get_etcd_client(etcd_service=None, etcd_port=None):
+def _get_etcd_client(etcd_service=None, etcd_port=None, cacert=None):
     srv = etcd_service or socket.gethostname()
     port = etcd_port or 2379
-    c = etcd.client.Client(port=port, host=srv)
+    if cacert:
+        potocol = 'https'
+        ca_cert = cacert
+    else:
+        protocol = 'http'
+        ca_cert = None
+    c = etcd.client.Client(port=port, host=srv, protocol=protocol,
+                           ca_cert=ca_cert)
     return c
 
 
@@ -101,7 +108,13 @@ if __name__ == '__main__':
                         help='Namespace to filter events')
     parser.add_argument('--reasons', nargs='+', type=str, default=REASONS,
                         help='Custom list of reasons to filter')
+    parser.add_argument('--tls', action='store_true',
+                        help='If communications should be encrypted')
     args = parser.parse_args()
+    if args.tls:
+        cacert = '/etc/ccp/etcd_ca.pem'
+    else:
+        cacert = None
     while True:
         stream = _get_kubernetes_stream()
         for line in stream.iter_lines():
@@ -112,7 +125,7 @@ if __name__ == '__main__':
             if (obj["kind"] == "Pod") and (obj["namespace"] == args.namespace):
                 LOG.info("Detected event: %s for pod: %s", reason, name)
                 if reason in args.reasons:
-                    etcd_c = _get_etcd_client()
+                    etcd_c = _get_etcd_client(cacert=cacert)
                     deleted = _delete_etcd_member(etcd_c, name)
                     if not deleted:
                         LOG.info("Delete of %s from etcd failed", name)

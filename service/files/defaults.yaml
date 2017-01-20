@@ -7,6 +7,8 @@ configs:
     server_port:
       cont: 2380
     token: "etcd-cluster"
+    tls:
+      enabled: true
 
 versions:
   etcd_version: v3.0.12
