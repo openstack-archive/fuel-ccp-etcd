@@ -6,7 +6,7 @@ ADD build.sh /build.sh
 
 RUN \
   apt-get update && \
-  useradd --user-group --create-home --home-dir /home/elector elector && \
+  useradd --user-group --create-home --home-dir /home/elector -G microservices elector && \
   chmod 755 /build.sh && \
   apt-get install -t jessie-backports -y golang-go && \
   bash /build.sh && \
