@@ -30,10 +30,17 @@ def _get_http_header(TOKEN_FILE):
     return header
 
 
-def _get_etcd_client(etcd_service=None, etcd_port=None):
+def _get_etcd_client(etcd_service=None, etcd_port=None, cacert=None):
     srv = etcd_service or socket.gethostname()
     port = etcd_port or 2379
-    c = etcd.client.Client(port=port, host=srv)
+    if cacert:
+        protocol = 'https'
+        ca_cert = cacert
+    else:
+        protocol = 'http'
+        ca_cert = None
+    c = etcd.client.Client(port=port, host=srv, protocol=protocol,
+                           ca_cert=ca_cert)
     return c
 
 
@@ -103,7 +110,13 @@ if __name__ == '__main__':
                         help='Namespace to filter events')
     parser.add_argument('--reasons', nargs='+', type=str, default=REASONS,
                         help='Custom list of reasons to filter')
+    parser.add_argument('--tls', action='store_true',
+                        help='If communications should be encrypted')
     args = parser.parse_args()
+    if args.tls:
+        cacert = '/opt/ccp/etc/tls/ca.pem'
+    else:
+        cacert = None
     while True:
         stream = _get_kubernetes_stream(args.namespace)
         for line in stream.iter_lines():
