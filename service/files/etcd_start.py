@@ -53,18 +53,32 @@ def _get_leader_pod_name(url):
 
 
 def start_etcd(name, ipaddr, client_port, server_port, token, bootstrap=False,
-               initial_members=None):
+               tls=False, initial_members=None):
     # TODO(amnk): configuration should not be hardcoded, and it should include
     # other options like datadir, snapshotting period, etc
     etcd_bin = ['/usr/local/bin/etcd']
     client_host = ETCD_HOST_TEMPLATE % (ipaddr, client_port)
+
+    # TODO(amnk): we need a separate non-TLS connection for entrypoint script,
+    # which connects to etcd pods via IP addresses
+    if tls:
+        insecure_listener = ",http://%s:%s" % ('127.0.0.1', client_port)
+    else:
+        insecure_listener = ""
     server_host = ETCD_HOST_TEMPLATE % (ipaddr, server_port)
     args = ['--name=%s' % name,
             '--listen-peer-urls=%s' % server_host,
-            '--listen-client-urls=%s' % client_host,
+            '--listen-client-urls=%s' % client_host + insecure_listener,
             '--advertise-client-urls=%s' % client_host,
             '--initial-advertise-peer-urls=%s' % server_host,
             '--initial-cluster-token=%s' % token]
+    if tls:
+        # Peer-to-peer communications are encrytted using peer-auto-tls etcd
+        # feature, while client/server communication is encrypted via provided
+        # certificates
+        args += ['--peer-auto-tls']
+        args += ['--cert-file=/etc/ccp/etcd_server_certificate.pem']
+        args += ['--key-file=/etc/ccp/etcd_server_key.pem']
     if bootstrap:
         boot_opts = ["--initial-cluster=%s=%s" % (name, server_host)]
         args += boot_opts
@@ -119,17 +133,22 @@ if __name__ == "__main__":
                         help='Etcd server port')
     parser.add_argument('-t', '--token', type=str, default='etcd-cluster',
                         help='Etcd cluster token')
+    parser.add_argument('--tls', action='store_true',
+                        help='If communications should be encrypted')
     args = parser.parse_args()
     leader = _get_leader_pod_name(ELECTOR_URL)
     hostname = socket.gethostname()
     ipaddr = socket.gethostbyname(hostname)
-    ETCD_HOST_TEMPLATE = 'http://%s:%d'
+    if args.tls:
+        ETCD_HOST_TEMPLATE = 'https://%s:%d'
+    else:
+        ETCD_HOST_TEMPLATE = 'http://%s:%d'
     if leader == ipaddr:
         # TODO(amnk): add recovery from complete disaster (e.g. restore data
         # from data-dir if it is available
         LOG.debug("I'm a leader, starting...")
         start_etcd(hostname, ipaddr, args.client_port, args.server_port,
-                   args.token, bootstrap=True)
+                   args.token, bootstrap=True, tls=args.tls)
     else:
         etcd_leader = ETCD_HOST_TEMPLATE % (leader, args.client_port)
         leader_endpoint = urlparse.urljoin(etcd_leader, 'v2/members')
@@ -138,4 +157,4 @@ if __name__ == "__main__":
         all_members = members + (',%s=%s' % (hostname, peer))
         LOG.debug("Leader is %s, joining cluster..." % etcd_leader)
         start_etcd(hostname, ipaddr, args.client_port, args.server_port,
-                   args.token, initial_members=all_members)
+                   args.token, tls=args.tls, initial_members=all_members)
