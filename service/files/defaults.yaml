@@ -6,6 +6,8 @@ configs:
       cont: 2379
     server_port:
       cont: 2380
+    tls:
+      enabled: true
 
 versions:
   etcd_version: v3.0.12

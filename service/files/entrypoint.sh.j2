@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+{% if security.tls.enabled and etcd.tls.enabled %}
+etcd --listen-client-urls=https://{{ network_topology["private"]["address"] }}:{{ etcd.client_port.cont }},http://127.0.0.1:{{ etcd.client_port.cont }}\
+     --advertise-client-urls=https://{{ address("etcd", etcd.client_port, with_scheme=False) }}\
+     --peer-auto-tls\
+     --cert-file=/opt/ccp/etc/tls/etcd_server_certificate.pem\
+     --key-file=/opt/ccp/etc/tls/etcd_server_key.pem\
+{% else %}
+etcd --listen-client-urls http://0.0.0.0:{{ etcd.client_port.cont }}\
+     --advertise-client-urls {{ address("etcd", etcd.client_port, with_scheme=True) }}
+{% endif %}
