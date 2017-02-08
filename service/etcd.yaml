@@ -12,5 +12,26 @@ service:
     - name: etcd
       image: etcd
       daemon:
-        command: etcd --listen-client-urls http://0.0.0.0:{{ etcd.client_port.cont }}
-                      --advertise-client-urls {{ address("etcd", etcd.client_port, with_scheme=True) }}
+        command: /entrypoint.sh
+        files:
+          - entrypoint
+      # {% if security.tls.enabled %}
+          - server_certificate
+          - server_key
+      # {% endif %}
+
+files:
+  entrypoint:
+    path: /entrypoint.sh
+    content: entrypoint.sh.j2
+    perm: "0755"
+# {% if security.tls.enabled %}
+  server_certificate:
+    path: /opt/ccp/etc/tls/etcd_server_certificate.pem
+    content: server.pem.j2
+    perm: "0644"
+  server_key:
+    path: /opt/ccp/etc/tls/etcd_server_key.pem
+    content: server-key.pem.j2
+    perm: "0644"
+# {% endif %}
