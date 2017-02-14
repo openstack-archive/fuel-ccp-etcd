@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-{% if security.tls.enabled and etcd.tls.enabled %}
+{% if etcd.tls.enabled %}
 etcd --listen-client-urls=https://{{ network_topology["private"]["address"] }}:{{ etcd.client_port.cont }},http://127.0.0.1:{{ etcd.client_port.cont }}\
      --advertise-client-urls=https://{{ address("etcd", etcd.client_port, with_scheme=False) }}\
      --peer-auto-tls\
