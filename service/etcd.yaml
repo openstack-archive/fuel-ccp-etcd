@@ -1,6 +1,7 @@
 dsl_version: 0.4.0
 service:
   name: etcd
+  kind: StatefulSet
   ports:
     - {{ etcd.client_port }}
     - {{ etcd.server_port }}
@@ -12,7 +13,7 @@ service:
     - name: etcd
       image: etcd
       daemon:
-        command: /opt/ccp/bin/entrypoint.sh
+        command: /opt/ccp/bin/entrypoint.py
         files:
           - entrypoint
       # {% if etcd.tls.enabled %}
@@ -22,8 +23,8 @@ service:
 
 files:
   entrypoint:
-    path: /opt/ccp/bin/entrypoint.sh
-    content: entrypoint.sh.j2
+    path: /opt/ccp/bin/entrypoint.py
+    content: entrypoint.py
     perm: "0755"
 # {% if etcd.tls.enabled %}
   server_certificate:
