@@ -8,6 +8,10 @@ configs:
       cont: 2380
     tls:
       enabled: true
+    token: cluster
+    additional_arguments:
+      election-timeout: 5000
+      heartbeat-interval: 250
 
 versions:
   etcd_version: v3.0.12
