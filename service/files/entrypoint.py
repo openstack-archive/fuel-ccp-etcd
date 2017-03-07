@@ -18,7 +18,7 @@ logging.basicConfig(format=LOG_FORMAT,
 LOG = logging.getLogger(__name__)
 
 GLOBALS_PATH = '/etc/ccp/globals/globals.json'
-
+GLOBALS_SECRETS_PATH = '/etc/ccp/global-secrets/global-secrets.json'
 
 def retry(f):
     @functools.wraps(f)
@@ -36,12 +36,25 @@ def retry(f):
     return wrap
 
 
+def merge_configs(variables, new_config):
+    for k, v in new_config.items():
+        if k not in variables:
+            variables[k] = v
+            continue
+        if isinstance(v, dict) and isinstance(variables[k], dict):
+            merge_configs(variables[k], v)
+        else:
+            variables[k] = v
+
+
 class Configuration():
-    def __init__(self, config_file):
-        LOG.info("Getting global variables from %s", config_file)
+    def __init__(self):
         values = {}
-        with open(config_file) as f:
+        with open(GLOBALS_PATH) as f:
             global_conf = json.load(f)
+        with open(GLOBALS_SECRETS_PATH) as f:
+            secrets = json.load(f)
+        merge_configs(global_conf, secrets)
         for key in ['etcd', 'namespace',  'security', 'cluster_domain']:
             values[key] = global_conf[key]
         hostname = socket.gethostname()
@@ -179,7 +192,7 @@ def _get_etcd_member_id(peers, name):
 
 
 if __name__ == "__main__":
-    config = Configuration(GLOBALS_PATH)
+    config = Configuration()
     etcd_members_api = config.members_api
     try:
         # The only reliable way to determine if etcd cluster exists is to query
